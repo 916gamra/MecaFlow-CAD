@@ -1,93 +1,61 @@
 import React from 'react';
-import { CADPart } from '../types';
 
-interface DraftingViewProps {
-  parts: CADPart[];
-}
-
-const DraftingView: React.FC<DraftingViewProps> = ({ parts }) => {
-  // Simple 2D projection using SVG
-  // We'll show Top, Front, and Side views
-  
-  const renderProjection = (view: 'top' | 'front' | 'side') => {
-    return (
-      <div className="flex-1 min-h-[300px] bg-[#0c0d10] border border-[var(--border)] rounded flex flex-col p-4 shadow-2xl">
-        <span className="text-[10px] uppercase font-mono text-[var(--text-dim)] mb-2 tracking-widest">{view} VIEW (ISO-A)</span>
-        <svg viewBox="-5 -5 10 10" className="flex-1 w-full h-full stroke-[var(--accent)] fill-[var(--accent)]/5 stroke-[0.05]">
-          <g transform="scale(1, -1)"> {/* Cartesian to SVG screen coords */}
-            {parts.map(part => {
-              if (part.type.startsWith('hole')) return null;
-
-              const [x, y, z] = part.position;
-              const [sx, sy, sz] = part.scale;
-
-              if (view === 'top') {
-                // X-Z projection
-                return (
-                  <rect 
-                    key={part.id}
-                    x={x - sx/2} 
-                    y={z - sz/2} 
-                    width={sx} 
-                    height={sz} 
-                  />
-                );
-              } else if (view === 'front') {
-                // X-Y projection
-                return (
-                  <rect 
-                    key={part.id}
-                    x={x - sx/2} 
-                    y={y - sy/2} 
-                    width={sx} 
-                    height={sy} 
-                  />
-                );
-              } else {
-                // Z-Y projection
-                return (
-                  <rect 
-                    key={part.id}
-                    x={z - sz/2} 
-                    y={y - sy/2} 
-                    width={sz} 
-                    height={sy} 
-                  />
-                );
-              }
-            })}
-          </g>
-        </svg>
-      </div>
-    );
-  };
-
+const DraftingView: React.FC = () => {
   return (
-    <div className="w-full h-full grid grid-cols-2 grid-rows-2 gap-4 bg-[var(--bg-deep)] p-8 rounded overflow-auto" id="drafting-view">
-      {renderProjection('top')}
-      {renderProjection('front')}
-      {renderProjection('side')}
-      <div className="flex-1 min-h-[300px] bg-[var(--bg-panel)] border border-[var(--border)] rounded p-8 flex flex-col items-center justify-center text-center shadow-2xl">
-         <div className="w-full p-4 border border-[var(--border)] bg-[#0c0d10] text-[var(--accent)] rounded mb-4">
-            <h4 className="font-bold text-xs uppercase tracking-widest">Engineering Sheet</h4>
-            <p className="text-[10px] text-[var(--text-dim)] mt-1">Propriété de SOFTWIRE 3D</p>
-         </div>
-         <div className="space-y-2 w-full text-left font-mono text-[10px]">
-            <div className="flex justify-between border-b border-[var(--border)] py-1 text-[var(--text-dim)]">
-              <span>DRAWN BY:</span>
-              <span className="text-[var(--text-main)] font-bold">SYSTEM_AUTO</span>
-            </div>
-            <div className="flex justify-between border-b border-[var(--border)] py-1 text-[var(--text-dim)]">
-              <span>DATE:</span>
-              <span className="text-[var(--text-main)] font-bold">{new Date().toLocaleDateString()}</span>
-            </div>
-            <div className="flex justify-between border-b border-[var(--border)] py-1 text-[var(--text-dim)]">
-              <span>SCALE:</span>
-              <span className="text-[var(--text-main)] font-bold">1:1.25</span>
+    <div className="w-full h-full bg-[var(--bg-deep)] p-8 rounded overflow-auto flex flex-col items-center justify-center p-8" id="drafting-view">
+      <div className="w-full max-w-4xl bg-[var(--bg-panel)] border border-[var(--border)] rounded flex flex-col p-8 shadow-2xl">
+         <div className="w-full p-4 border border-[var(--border)] bg-[#0c0d10] text-[var(--accent)] rounded mb-8 text-center flex justify-between items-center">
+            <h4 className="font-bold text-xs uppercase tracking-widest text-left">
+              ZERO-GAP ENGINEERING SHEET<br/>
+              <span className="text-[9px] text-[var(--text-dim)]">المخطط الهندسي للمقبض</span>
+            </h4>
+            <div className="text-right">
+              <p className="text-[10px] text-[var(--text-dim)]">SYSTEM_AUTO</p>
+              <p className="text-[10px] text-[var(--text-main)] font-mono">{new Date().toLocaleDateString()}</p>
             </div>
          </div>
-         <button className="mt-8 w-full py-2 bg-[var(--accent)] text-white text-[10px] font-bold uppercase tracking-widest rounded hover:opacity-90 transition-opacity">
-             Exporter ISO A3
+         
+         <div className="w-full grid grid-cols-2 gap-8 mb-8">
+            <div className="border border-[var(--border)] bg-[#0c0d10] p-6 text-center text-[var(--text-dim)] font-mono text-[10px] flex flex-col items-center justify-center min-h-[250px]">
+               <div className="relative w-40 h-40 border-2 border-dashed border-[var(--accent)] rounded-full flex items-center justify-center mb-4">
+                  <div className="absolute top-0 bottom-0 w-px bg-[var(--accent)]/50"></div>
+                  <div className="absolute left-0 right-0 h-px bg-[var(--accent)]/50"></div>
+                  <span className="bg-[#0c0d10] px-2 text-[var(--accent)]">Ø TOP</span>
+               </div>
+               [ مسقط رأسي للمقلاة ]
+            </div>
+            <div className="border border-[var(--border)] bg-[#0c0d10] p-6 text-center text-[var(--text-dim)] font-mono text-[10px] flex flex-col items-center justify-center min-h-[250px]">
+               <div className="relative w-20 h-40 border-2 border-[var(--accent)] rounded-sm flex items-center justify-center mb-4">
+                  <div className="absolute top-0 bottom-0 w-px bg-[var(--accent)]/50"></div>
+                  <span className="bg-[#0c0d10] px-2 text-[var(--accent)] absolute -right-6 origin-left -rotate-90 whitespace-nowrap">TUBE LENGTH</span>
+               </div>
+               [ مسقط جانبي للأنبوب مع زاوية القص ]
+            </div>
+         </div>
+
+         <div className="space-y-4 w-full text-left font-mono text-[10px] mb-8">
+            <div className="grid grid-cols-2 gap-4">
+               <div className="bg-[#0c0d10] p-3 border border-[var(--border)] flex justify-between">
+                 <span className="text-[var(--text-dim)]">BOOLEAN ALGORITHM:</span>
+                 <span className="text-[var(--text-main)] font-bold">EXACT CSG</span>
+               </div>
+               <div className="bg-[#0c0d10] p-3 border border-[var(--border)] flex justify-between">
+                 <span className="text-[var(--text-dim)]">SURFACE QUALITY:</span>
+                 <span className="text-[var(--text-main)] font-bold text-green-500">ZERO SCAR / ZERO GAP</span>
+               </div>
+               <div className="bg-[#0c0d10] p-3 border border-[var(--border)] flex justify-between">
+                 <span className="text-[var(--text-dim)]">SCALE:</span>
+                 <span className="text-[var(--text-main)] font-bold">1:1 (True Scale)</span>
+               </div>
+               <div className="bg-[#0c0d10] p-3 border border-[var(--border)] flex justify-between">
+                 <span className="text-[var(--text-dim)]">EXPORT:</span>
+                 <span className="text-[var(--text-main)] font-bold">STEP / STL Solid</span>
+               </div>
+            </div>
+         </div>
+         
+         <button className="w-full py-4 bg-[var(--accent)] text-white text-[11px] font-bold uppercase tracking-widest rounded hover:opacity-90 transition-opacity">
+             تصدير المخطط (PDF ISO A3)
          </button>
       </div>
     </div>
