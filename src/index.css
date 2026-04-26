@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-mono: 'Courier New', Courier, monospace;
+}
+
+:root {
+  --bg-deep: #090A0C;
+  --bg-panel: #14161A;
+  --bg-header: #1C1F24;
+  --text-main: #E1E1E1;
+  --text-dim: #8E9299;
+  --accent: #F27D26;
+  --accent-dim: #7C4217;
+  --border: #2D3139;
+}
+
+body {
+  background-color: var(--bg-deep);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+}
