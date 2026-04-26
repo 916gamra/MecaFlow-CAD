@@ -181,21 +181,56 @@ const ThreeCanvas = forwardRef<ThreeCanvasRef, ThreeCanvasProps>(({ config, grid
 
     try {
       exportMeshRef.current = null;
-
-      // 1. Generate Pan (Virtual Cutter)
-      const Rc = config.pan.bottomDiameter / 2;
-      const Rt = config.pan.topDiameter / 2;
-      const Hp = config.pan.height;
+      // 1. Generate Pan (Virtual Cutter) with Curved Wall and Bottom Fillet
+      const r_bottom = config.pan.bottomDiameter / 2;
+      const r_top = config.pan.topDiameter / 2;
+      const height = config.pan.height;
+      const rim_thickness = config.pan.rimThickness || 2.0;
+      const curve_radius = config.pan.curveRadius || 100.0;
+      const fillet_r = config.pan.bottomFilletRadius || 8.0;
       
-      const panGeometry = new THREE.CylinderGeometry(Rt, Rc, Hp, 64);
-      // Move so origin is center 
-      panGeometry.translate(0, Hp/2, 0); 
+      const points = [];
+      // Center Point
+      points.push(new THREE.Vector2(0, 0));
+      
+      // Bottom Fillet Arc
+      const filletSegments = 16;
+      for (let i = 0; i <= filletSegments; i++) {
+        const theta = (Math.PI / 2) * (1 - i / filletSegments);
+        const x = r_bottom - fillet_r + fillet_r * Math.cos(theta);
+        const y = fillet_r - fillet_r * Math.sin(theta);
+        points.push(new THREE.Vector2(x, y));
+      }
+
+      // Main Convex Side Arc
+      const bulge_offset = Math.max(2.0, Math.min(20.0, (200.0 / curve_radius) * 4.0));
+      const r_mid = (r_bottom + r_top) / 2.0 + bulge_offset;
+      const z_mid = height / 2.0;
+
+      const cx = 2 * r_mid - 0.5 * r_bottom - 0.5 * r_top;
+      const cy = 2 * z_mid - 0.5 * 0 - 0.5 * height;
+
+      const curve = new THREE.QuadraticBezierCurve(
+        new THREE.Vector2(r_bottom, fillet_r),
+        new THREE.Vector2(cx, cy),
+        new THREE.Vector2(r_top, height)
+      );
+      
+      const arcPoints = curve.getPoints(32);
+      points.push(...arcPoints.slice(1));
+      
+      // Rim and Top Closing
+      points.push(new THREE.Vector2(r_top + rim_thickness, height));
+      points.push(new THREE.Vector2(r_top + rim_thickness, height + rim_thickness));
+      points.push(new THREE.Vector2(0, height + rim_thickness));
+
+      const panGeometry = new THREE.LatheGeometry(points, 64);
       
       const panMesh = new THREE.Mesh(panGeometry, new THREE.MeshStandardMaterial({
         color: 0xff3333,
         transparent: true,
         opacity: config.renderMode === 'preview' ? 0.2 : 0.05,
-        depthWrite: false, // Prevent depth sorting issues with transparent objects
+        depthWrite: false,
         side: THREE.DoubleSide
       }));
       panMesh.name = 'zerogap_pan';
@@ -204,39 +239,41 @@ const ThreeCanvas = forwardRef<ThreeCanvasRef, ThreeCanvasProps>(({ config, grid
       // 2. Generate Tube (Main Body)
       const tw = config.tube.width;
       const th = config.tube.height;
-      const tl = config.tube.length;
+      const tl = config.tube.totalLength;
       const tt = config.tube.thickness;
       const tr = config.tube.cornerRadius;
+      const clearance = config.thermalClearance ? 0.1 : 0;
 
       // Outer Shape
       const outerShape = new THREE.Shape();
-      const x = -tw/2, y = -th/2;
-      outerShape.moveTo(x + tr, y);
-      outerShape.lineTo(x + tw - tr, y);
-      outerShape.quadraticCurveTo(x + tw, y, x + tw, y + tr);
-      outerShape.lineTo(x + tw, y + th - tr);
-      outerShape.quadraticCurveTo(x + tw, y + th, x + tw - tr, y + th);
-      outerShape.lineTo(x + tr, y + th);
-      outerShape.quadraticCurveTo(x, y + th, x, y + th - tr);
-      outerShape.lineTo(x, y + tr);
-      outerShape.quadraticCurveTo(x, y, x + tr, y);
+      const tx = -tw/2, ty = -th/2;
+      outerShape.moveTo(tx + tr, ty);
+      outerShape.lineTo(tx + tw - tr, ty);
+      outerShape.quadraticCurveTo(tx + tw, ty, tx + tw, ty + tr);
+      outerShape.lineTo(tx + tw, ty + th - tr);
+      outerShape.quadraticCurveTo(tx + tw, ty + th, tx + tw - tr, ty + th);
+      outerShape.lineTo(tx + tr, ty + th);
+      outerShape.quadraticCurveTo(tx, ty + th, tx, ty + th - tr);
+      outerShape.lineTo(tx, ty + tr);
+      outerShape.quadraticCurveTo(tx, ty, tx + tr, ty);
 
       // Inner Hole
       const innerShape = new THREE.Path();
-      const itr = Math.max(0, tr - tt);
-      const ix = x + tt, iy = y + tt;
-      const itw = tw - 2*tt, ith = th - 2*tt;
+      const effective_tt = tt - clearance; // Simulate making the tube "looser" internally
+      const itr = Math.max(0, tr - effective_tt);
+      const itx = tx + effective_tt, ity = ty + effective_tt;
+      const itw = tw - 2*effective_tt, ith = th - 2*effective_tt;
       
       if (itw > 0 && ith > 0) {
-        innerShape.moveTo(ix + itr, iy);
-        innerShape.lineTo(ix + itw - itr, iy);
-        innerShape.quadraticCurveTo(ix + itw, iy, ix + itw, iy + itr);
-        innerShape.lineTo(ix + itw, iy + ith - itr);
-        innerShape.quadraticCurveTo(ix + itw, iy + ith, ix + itw - itr, iy + ith);
-        innerShape.lineTo(ix + itr, iy + ith);
-        innerShape.quadraticCurveTo(ix, iy + ith, ix, iy + ith - itr);
-        innerShape.lineTo(ix, iy + itr);
-        innerShape.quadraticCurveTo(ix, iy, ix + itr, iy);
+        innerShape.moveTo(itx + itr, ity);
+        innerShape.lineTo(itx + itw - itr, ity);
+        innerShape.quadraticCurveTo(itx + itw, ity, itx + itw, ity + itr);
+        innerShape.lineTo(itx + itw, ity + ith - itr);
+        innerShape.quadraticCurveTo(itx + itw, ity + ith, itx + itw - itr, ity + ith);
+        innerShape.lineTo(itx + itr, ity + ith);
+        innerShape.quadraticCurveTo(itx, ity + ith, itx, ity + ith - itr);
+        innerShape.lineTo(itx, ity + itr);
+        innerShape.quadraticCurveTo(itx, ity, itx + itr, ity);
         outerShape.holes.push(innerShape);
       }
 
@@ -246,42 +283,84 @@ const ThreeCanvas = forwardRef<ThreeCanvasRef, ThreeCanvasProps>(({ config, grid
         curveSegments: 16
       });
       
-      // Center the tube extrusion along Z
-      tubeGeom.translate(0, 0, -tl/2);
-
       const tubeMesh = new THREE.Mesh(tubeGeom, new THREE.MeshStandardMaterial({
         color: 0xcccccc,
         metalness: 0.5,
         roughness: 0.3
       }));
 
+      // 3. Handle End Cutter (Tilt Plane at tail of tube)
+      const handleAngleRad = (config.assembly.handleAngle || 10) * (Math.PI / 180);
+      const handleCutterGeom = new THREE.BoxGeometry(tw * 4, th * 4, tl);
+      handleCutterGeom.translate(0, 0, tl / 2); // Center of cut plane
+      const handleCutterMesh = new THREE.Mesh(handleCutterGeom);
+      handleCutterMesh.position.set(0, 0, tl);
+      handleCutterMesh.rotation.x = -handleAngleRad;
+      handleCutterMesh.updateMatrixWorld(true);
+
       // Apply Assembly Transformations
       const angleRad = (90 - config.assembly.tiltAngle) * (Math.PI / 180);
+      const tiltAxis = config.assembly.tiltAxis || 'X';
+
+      // Position logic: partLength determines where the pan starts cutting relative to tube start (0,0,0)
+      panMesh.position.set(0, 0, config.tube.partLength);
       
-      tubeMesh.position.set(0, config.assembly.heightOffset, -config.assembly.insertionDistance + tl/2);
-      tubeMesh.rotation.x = angleRad;
+      // Orient the tube
+      tubeMesh.position.set(0, config.assembly.heightOffset, -config.assembly.insertionDistance);
+      if (tiltAxis === 'X') {
+        tubeMesh.rotation.x = angleRad;
+      } else {
+        tubeMesh.rotation.z = angleRad;
+      }
+      
       tubeMesh.updateMatrixWorld(true);
       panMesh.updateMatrixWorld(true);
 
       if (config.renderMode === 'preview') {
         tubeMesh.name = 'zerogap_tube_preview';
         
-        // Add wireframe to tube for better visual clarity matching CAD expectation
         const edges = new THREE.EdgesGeometry(tubeGeom);
         const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial( { color: 0x333333 } ) );
         tubeMesh.add(line);
         
         scene.add(tubeMesh);
+        scene.add(handleCutterMesh); // Show cutter in preview
+        handleCutterMesh.name = 'zerogap_handle_cutter_preview';
+        handleCutterMesh.material = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.1 });
+        
         exportMeshRef.current = tubeMesh; 
       } 
       else {
         // Run CSG Operation (Zero-Gap)
         const tubeBSP = CSG.fromMesh(tubeMesh);
         const panBSP = CSG.fromMesh(panMesh);
+        const handleBSP = CSG.fromMesh(handleCutterMesh);
         
-        // Subtract Pan from Tube
-        const resultBSP = tubeBSP.subtract(panBSP);
+        // Subtract Pan and Handle Cutter from Tube
+        let resultBSP = tubeBSP.subtract(panBSP).subtract(handleBSP);
         
+        // Twin Nesting Logic
+        if (config.nestingMode === 'twin') {
+          // Invert the result for the twin
+          // Mirroring is a bit tricky with BSP, we can export mesh and mirror mesh then BSP again or use matrix
+          const singleMesh = CSG.toMesh(resultBSP, new THREE.Matrix4());
+          const twinMesh = singleMesh.clone();
+          
+          // Mirror across the handle cut plane
+          // The handle plane is at Z=tl with handleAngle
+          // Roughly, we can rotate 180 around the handle plane normal
+          // Or just rotate 180 and translate
+          twinMesh.rotateX(Math.PI);
+          twinMesh.rotateZ(Math.PI);
+          
+          // Position relative to first part
+          // We want the slanted faces to be close
+          twinMesh.position.z = (tl * 2) + (config.slugGap || 5);
+          
+          const twinBSP = CSG.fromMesh(twinMesh);
+          resultBSP = resultBSP.union(twinBSP);
+        }
+
         // Create Result Mesh
         const resultMat = new THREE.MeshStandardMaterial({
           color: 0xF27D26, // Orange accent
@@ -293,18 +372,20 @@ const ThreeCanvas = forwardRef<ThreeCanvasRef, ThreeCanvasProps>(({ config, grid
         const finalMesh = CSG.toMesh(resultBSP, tubeMesh.matrixWorld, resultMat);
         finalMesh.name = 'zerogap_result';
         
-        // Ensure geometry is clean
         finalMesh.geometry.computeVertexNormals();
 
-        // Optional: Adding edges for CAD look
+        // Simulated rounding if config.addFillet is true (visual effect with edges)
         const edges = new THREE.EdgesGeometry(finalMesh.geometry);
-        const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial( { color: 0xffffff, opacity: 0.2, transparent: true } ) );
+        const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial( { 
+          color: config.addFillet ? 0xffffff : 0x000000, 
+          opacity: 0.2, 
+          transparent: true 
+        } ) );
         finalMesh.add(line);
 
         scene.add(finalMesh);
         exportMeshRef.current = finalMesh;
       }
-
     } catch (e) {
       console.error("Zero-Gap Engine Error:", e);
     }

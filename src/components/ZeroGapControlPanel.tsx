@@ -10,14 +10,17 @@ interface ControlPanelProps {
 }
 
 const ZeroGapControlPanel: React.FC<ControlPanelProps> = ({ config, onUpdate, onExport }) => {
-  const updatePan = (key: keyof ZeroGapState['pan'], val: string) => {
-    onUpdate({ ...config, pan: { ...config.pan, [key]: parseFloat(val) || 0 } });
+  const updatePan = (key: keyof ZeroGapState['pan'], val: string | number) => {
+    const numericVal = typeof val === 'string' ? parseFloat(val) || 0 : val;
+    onUpdate({ ...config, pan: { ...config.pan, [key]: numericVal } });
   };
-  const updateTube = (key: keyof ZeroGapState['tube'], val: string) => {
-    onUpdate({ ...config, tube: { ...config.tube, [key]: parseFloat(val) || 0 } });
+  const updateTube = (key: keyof ZeroGapState['tube'], val: string | number) => {
+    const numericVal = typeof val === 'string' ? parseFloat(val) || 0 : val;
+    onUpdate({ ...config, tube: { ...config.tube, [key]: numericVal } });
   };
-  const updateAssembly = (key: keyof ZeroGapState['assembly'], val: string) => {
-    onUpdate({ ...config, assembly: { ...config.assembly, [key]: parseFloat(val) || 0 } });
+  const updateAssembly = (key: keyof ZeroGapState['assembly'], val: string | number) => {
+    const numericVal = typeof val === 'string' ? parseFloat(val) || 0 : val;
+    onUpdate({ ...config, assembly: { ...config.assembly, [key]: numericVal } });
   };
 
   const renderSlider = (
@@ -73,7 +76,9 @@ const ZeroGapControlPanel: React.FC<ControlPanelProps> = ({ config, onUpdate, on
           {renderSlider('القطر السفلي القاع', config.pan.bottomDiameter, v => updatePan('bottomDiameter', v), 50, 400)}
           {renderSlider('القطر العلوي', config.pan.topDiameter, v => updatePan('topDiameter', v), 100, 500)}
           {renderSlider('الارتفاع الكلي', config.pan.height, v => updatePan('height', v), 20, 200)}
-          {renderSlider('قوس الجدار الداخلي (Fillet)', config.pan.filletRadius, v => updatePan('filletRadius', v), 1, 50)}
+          {renderSlider('نصف قطر تقوس الجدار', config.pan.curveRadius, v => updatePan('curveRadius', v), 50, 250, 5)}
+          {renderSlider('قوس القاع (Fillet)', config.pan.bottomFilletRadius, v => updatePan('bottomFilletRadius', v), 0, 30, 0.5)}
+          {renderSlider('سماكة الحافة العلوية', config.pan.rimThickness, v => updatePan('rimThickness', v), 0, 10, 0.5)}
         </section>
 
         {/* Tube Parameters */}
@@ -87,15 +92,64 @@ const ZeroGapControlPanel: React.FC<ControlPanelProps> = ({ config, onUpdate, on
           {renderSlider('ارتفاع المقبض', config.tube.height, v => updateTube('height', v), 5, 50)}
           {renderSlider('سماكة المعدن', config.tube.thickness, v => updateTube('thickness', v), 0.5, 5.0, 0.1)}
           {renderSlider('تنعيم الحواف (R)', config.tube.cornerRadius, v => updateTube('cornerRadius', v), 0, Math.min(config.tube.width/2, config.tube.height/2), 0.1)}
-          {renderSlider('الطول الكلي', config.tube.length, v => updateTube('length', v), 50, 300)}
+          {renderSlider('الطول الكلي للأنبوب', config.tube.totalLength, v => updateTube('totalLength', v), 50, 300)}
+          {renderSlider('طول القطعة الناتجة', config.tube.partLength, v => updateTube('partLength', v), 10, config.tube.totalLength)}
+        </section>
+
+        {/* Nesting Parameters */}
+        <section className="mb-6 border-b border-[var(--border)] pb-4">
+          <label className="block text-[10px] font-bold text-[var(--text-dim)] uppercase mb-3 text-right">وضع التعشيش (Nesting)</label>
+          <div className="flex bg-[#0c0d10] p-1 border border-[var(--border)] rounded mb-4">
+             <button 
+               className={`flex-1 py-1 text-[10px] font-bold uppercase transition-colors rounded ${config.nestingMode === 'single' ? 'bg-[var(--accent)] text-white' : 'text-[var(--text-dim)] hover:text-white'}`}
+               onClick={() => onUpdate({ ...config, nestingMode: 'single' })}
+             >قطعة واحدة</button>
+             <button 
+               className={`flex-1 py-1 text-[10px] font-bold uppercase transition-colors rounded ${config.nestingMode === 'twin' ? 'bg-[var(--accent)] text-white' : 'text-[var(--text-dim)] hover:text-white'}`}
+               onClick={() => onUpdate({ ...config, nestingMode: 'twin' })}
+             >قطعتان متعاكستان</button>
+           </div>
+           {config.nestingMode === 'twin' && renderSlider('خلوص الفاصل (Slug Gap)', config.slugGap, v => onUpdate({ ...config, slugGap: parseFloat(v) || 0 }), 0, 20, 0.5)}
         </section>
 
         {/* Assembly Parameters */}
-        <section className="mb-2">
+        <section className="mb-2 border-b border-[var(--border)] pb-4">
           <label className="block text-[10px] font-bold text-[var(--text-dim)] uppercase mb-3 text-right">زاوية التركيب والتموضع</label>
-          {renderSlider('زاوية الميلان', config.assembly.tiltAngle, v => updateAssembly('tiltAngle', v), -90, 90)}
+          <div className="flex bg-[#0c0d10] p-1 border border-[var(--border)] rounded mb-4">
+             <button 
+               className={`flex-1 py-1 text-[10px] font-bold uppercase transition-colors rounded ${config.assembly.tiltAxis === 'X' ? 'bg-[var(--accent)] text-white' : 'text-[var(--text-dim)] hover:text-white'}`}
+               onClick={() => onUpdate({ ...config, assembly: { ...config.assembly, tiltAxis: 'X' } })}
+             >محور X</button>
+             <button 
+               className={`flex-1 py-1 text-[10px] font-bold uppercase transition-colors rounded ${config.assembly.tiltAxis === 'Y' ? 'bg-[var(--accent)] text-white' : 'text-[var(--text-dim)] hover:text-white'}`}
+               onClick={() => onUpdate({ ...config, assembly: { ...config.assembly, tiltAxis: 'Y' } })}
+             >محور Y</button>
+           </div>
+          {renderSlider('زاوية ميلان المقلاة', config.assembly.tiltAngle, v => updateAssembly('tiltAngle', v), -90, 90)}
+          {renderSlider('زاوية المقبض (Handle Angle)', config.assembly.handleAngle, v => updateAssembly('handleAngle', v), 0, 45)}
           {renderSlider('الارتفاع من القاع', config.assembly.heightOffset, v => updateAssembly('heightOffset', v), 0, 150)}
           {renderSlider('مسافة الاختراق', config.assembly.insertionDistance, v => updateAssembly('insertionDistance', v), 0, 150)}
+        </section>
+
+        {/* Final Touches */}
+        <section className="mt-4 pb-4">
+          <label className="block text-[10px] font-bold text-[var(--text-dim)] uppercase mb-3 text-right">اللمسات النهائية</label>
+          <div className="flex flex-col gap-2">
+            <button 
+              onClick={() => onUpdate({ ...config, addFillet: !config.addFillet })}
+              className={`w-full py-2 text-[10px] font-bold uppercase border border-[var(--border)] rounded flex items-center justify-between px-3 ${config.addFillet ? 'bg-[var(--accent)]/10 text-[var(--accent)] border-[var(--accent)]' : 'text-[var(--text-dim)] hover:border-[var(--text-main)]'}`}
+            >
+              <span>تنعيم حافة القطع (0.2mm)</span>
+              <div className={`w-3 h-3 rounded-full ${config.addFillet ? 'bg-[var(--accent)]' : 'bg-[var(--border)]'}`} />
+            </button>
+            <button 
+              onClick={() => onUpdate({ ...config, thermalClearance: !config.thermalClearance })}
+              className={`w-full py-2 text-[10px] font-bold uppercase border border-[var(--border)] rounded flex items-center justify-between px-3 ${config.thermalClearance ? 'bg-[var(--accent)]/10 text-[var(--accent)] border-[var(--accent)]' : 'text-[var(--text-dim)] hover:border-[var(--text-main)]'}`}
+            >
+              <span>إضافة تخليص حراري (+0.1mm)</span>
+              <div className={`w-3 h-3 rounded-full ${config.thermalClearance ? 'bg-[var(--accent)]' : 'bg-[var(--border)]'}`} />
+            </button>
+          </div>
         </section>
       </div>
 

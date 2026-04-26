@@ -19,10 +19,14 @@ export default function App() {
     gridVisible: true,
     units: 'mm',
     zeroGap: {
-      pan: { bottomDiameter: 150, topDiameter: 250, height: 60, filletRadius: 20 },
-      tube: { width: 30, height: 15, thickness: 1.2, length: 120, cornerRadius: 5.75 },
-      assembly: { tiltAngle: 25, insertionDistance: 50, heightOffset: 25 },
-      renderMode: 'boolean'
+      pan: { bottomDiameter: 120, topDiameter: 280, height: 50, curveRadius: 100, rimThickness: 2, bottomFilletRadius: 8 },
+      tube: { width: 38, height: 25, thickness: 1.2, totalLength: 120, partLength: 70, cornerRadius: 5.75 },
+      assembly: { tiltAngle: 15, handleAngle: 10, insertionDistance: 50, heightOffset: 25, tiltAxis: 'X' },
+      renderMode: 'boolean',
+      addFillet: true,
+      thermalClearance: false,
+      nestingMode: 'twin',
+      slugGap: 5
     }
   });
 

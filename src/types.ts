@@ -18,21 +18,26 @@ export interface PanConfig {
   bottomDiameter: number; 
   topDiameter: number;    
   height: number;         
-  filletRadius: number;   
+  curveRadius: number;   
+  rimThickness: number;
+  bottomFilletRadius: number;
 }
 
 export interface TubeConfig {
   width: number;          
   height: number;         
   thickness: number;      
-  length: number;         
+  totalLength: number;         
+  partLength: number;
   cornerRadius: number;   
 }
 
 export interface AssemblyConfig {
-  tiltAngle: number;      
+  tiltAngle: number;
+  handleAngle: number;
   insertionDistance: number;
-  heightOffset: number;   
+  heightOffset: number;
+  tiltAxis: 'X' | 'Y';
 }
 
 export interface ZeroGapState {
@@ -40,6 +45,10 @@ export interface ZeroGapState {
   tube: TubeConfig;
   assembly: AssemblyConfig;
   renderMode: 'preview' | 'boolean';
+  addFillet: boolean;
+  thermalClearance: boolean;
+  nestingMode: 'single' | 'twin';
+  slugGap: number;
 }
 
 export interface CADState {
