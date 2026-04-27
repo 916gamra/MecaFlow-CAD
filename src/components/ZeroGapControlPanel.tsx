@@ -1,5 +1,6 @@
 import React from 'react';
 import { ZeroGapState } from '../types';
+import { generateCadQueryScript } from '../lib/exportUtils';
 import { STLExporter } from 'three-stdlib';
 import * as THREE from 'three';
 
@@ -156,9 +157,26 @@ const ZeroGapControlPanel: React.FC<ControlPanelProps> = ({ config, onUpdate, on
       <div className="p-4 border-t border-[var(--border)] bg-[#090a0c]">
         <button 
           onClick={onExport}
-          className="w-full py-3 bg-[var(--accent)] hover:opacity-90 transition-opacity text-white font-bold text-[11px] uppercase tracking-widest rounded shadow-[0_0_15px_rgba(242,125,38,0.3)]"
+          className="w-full py-2 mb-2 bg-[var(--accent)] hover:opacity-90 transition-opacity text-white font-bold text-[11px] uppercase tracking-widest rounded shadow-[0_0_15px_rgba(242,125,38,0.3)]"
         >
-          تصدير التصميم (Export STL)
+          تصدير 3D مباشر (STL)
+        </button>
+        <button 
+          onClick={() => {
+            const scriptContent = generateCadQueryScript(config);
+            const blob = new Blob([scriptContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ZeroGap_Pipeline_${new Date().getTime()}.py`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          }}
+          className="w-full py-2 bg-blue-600 hover:bg-blue-500 transition-colors text-white font-bold text-[11px] uppercase tracking-widest rounded border border-blue-500"
+        >
+          تنزيل سكريبت المصنع (STEP)
         </button>
         <p className="text-[9px] text-[var(--text-dim)] mt-3 text-center leading-relaxed">
           جاهز للتوجيه لمنظومة الليزر (Scrap-free Guarantee)

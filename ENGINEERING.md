@@ -1,65 +1,64 @@
-# Engineering & Mathematical Logic 🧠
+# Engineering & Mathematical Logic 🧠 (الهندسة والمنطق الرياضي)
 
-This document details the geometric principles used in the **Zero-Gap Laser CAD Pro** engine.
+هذا المستند يشرح المبادئ الهندسية والرياضية التي يعتمد عليها محرك **Zero-Gap Laser CAD Pro**.
 
-## 1. Pan Surface Modeling (The Cutter)
+## 1. نمذجة سطح المقلاة (The Virtual Pan Cutter)
 
-The pan is modeled as a surface of revolution (Lathe) using a series of defined points:
+تتم نمذجة المقلاة كسطح دوراني (Surface of Revolution / Lathe) يعتمد على محاور محددة:
 
-### The Quadratic Bezier Side Wall
-To match real-world pan "bulge", we don't use a simple line. We use a **Quadratic Bezier Curve**.
-- **P0**: Bottom Fillet Tip `(r_bottom, fillet_r)`
-- **P1 (Control Point)**: Calculated based on `curveRadius`.
-- **P2**: Top Rim `(r_top, height)`
+### الجدار الجانبي (Quadratic Bezier Curve)
+لإنشاء شكل قريب من المقالي الحقيقية، لا نستخدم المخروط البسيط المعتمد على الخطوط المستقيمة (Linear Cone)، بل نستخدم **منحنى بيزيه من الدرجة الثانية (Quadratic Bezier Curve)**:
+- **P0**: بداية قوس القاع (Bottom Fillet Tip) الإحداثيات: `(r_bottom - fillet_r + fillet_r, fillet_r)`
+- **P1**: نقطة التحكم المركزية (Control Point) وتعتمد على الـ `curveRadius` وتأثير "الانتفاخ" (Bulge Offset).
+- **P2**: نقطة الفوهة العلوية للمقلاة `(r_top, height)`.
 
-The control point calculation uses a `bulge_offset`:
+محصلة الانحناء:
 ```typescript
 const bulge_offset = Math.max(2.0, Math.min(20.0, (200.0 / curve_radius) * 4.0));
 const r_mid = (r_bottom + r_top) / 2.0 + bulge_offset;
-const cx = 2 * r_mid - 0.5 * r_bottom - 0.5 * r_top;
 ```
-This ensures that as `curveRadius` decreases, the pan becomes more "rounded" or "fat".
+هذا يضمن أن تناقص الـ `curveRadius` سيزيد من تحدب الجدار بشكل يحاكي انتفاخ البدن الفعلي للمقلاة.
 
-### The Bottom Fillet
-A 90-degree arc is used to transition from the flat bottom `(0, 0)` to the side wall. This prevents sharp "dead zones" where the handle wouldn't touch the pan surface.
+### قوس القاع (Bottom Fillet)
+انتقال تدريجي ناعم من المركز السطحي بـ `(0,0)` إلى الجدار الجانبي باستخدام قوس يعتمد على `bottomFilletRadius`. هذا القوس يمنع وجود "زاوية ميتة" حادة في قاع المقلاة، وهو السبب الرئيسي في الحصول على تطابق فعلي (Zero-Gap) للـ "الأذنين" (الجانبين الطويلين للقطعة عند ميل المقبض).
 
 ---
 
-## 2. The Zero-Gap Boolean Operation
+## 2. المنطق البولياني للتطابق (Zero-Gap Boolean Operation)
 
-The core "cutting" logic relies on the **Subtraction Pattern**:
+النواة الأساسية للنظام تعمل بمنطقية القطع الطرحي للمجسمات (Constructive Solid Geometry - CSG):
 $$ Result = Tube - (Pan \cup HandleCutter) $$
 
-### Coordinate Alignment
-1. The **Tube** is the base object, oriented along the Z-axis.
-2. The **Pan** is translated by `partLength` along the Z-axis.
-3. The **Tilt Angle** is applied to the tube itself, simulating how it is held against the laser head or the pan surface during assembly.
+### مصفوفة الإحداثيات (Coordinate Alignment)
+1. يُموضع **الأنبوب (Tube)** بناءً على Z-axis ويمتد من النقطة `(0,0)`.
+2. يتم إزاحة **المقلاة الافتراضية (Pan)** على المحور Z بمسافة `partLength` (طول القطعة الناتجة).
+3. يتم إمالة الأنبوب بزاوية `tiltAngle` حول المحور المختار (Y للميل العمودي الطولي، و X للميل العرضي).
 
 ---
 
-## 3. Twin Nesting Logic (The "Common Line")
+## 3. منطق التعشيش المزدوج (Twin Nesting Logic / Common Line)
 
-When `nestingMode` is set to `twin`, the engine performs a complex transformation:
-1. **Part A**: The standard single handle part.
-2. **Handle Plane**: A plane at `Z = totalLength` tilted by `-handleAngle`.
-3. **Mirror Transformation**:
-   - The engine clones Part A.
-   - It performs a 180-degree rotation around the X and Z axes.
-   - It translates the twin by `(totalLength * 2) + slugGap`.
-4. **Union**: The two pieces are fused into a single manifold object.
-
-This allows the factory to cut two pieces in one go, with the rear slanted faces sharing a single cut path (Common Line).
+عند تفعيل وضع القطعتين (Nesting Mode = Twin)، يقوم النظام بتطبيق التحويل المعقد (Complex Transformations) التالي:
+1. **القطعة الأولى (Part A)**: يتم حسابها كالمعتاد.
+2. **الواجهة المائلة**: يتم قطع الطرف الخلفي بزاوية `handleAngle`.
+3. **التحويل الخاص (Mirror & Transform)**:
+   - استنساخ القطعة الأولى.
+   - دوران المحور Y بزاوية 180° `twinMesh.rotateY(Math.PI)`.
+   - نقل القطعة بمسافة إجمالية `(totalLength * 2) + slugGap`.
+4. **الاتحاد (Union)**: يتم لحام المجسمين لإنتاج قطعة نهائية واحدة تقرأها ماكينات الليزر كمسار مشترك (Common Line). 
 
 ---
 
-## 4. Performance Constraints
+## 4. قيود الأداء ونقاط الصفر للماكينة (Performance & Machining Limits)
 
-### Mesh Density
-- **Lathe Segments**: 64 (higher results in too many triangles for CSG).
-- **Tube Extrusion**: 16 curve segments.
-This balance ensures the CSG operation completes in `< 500ms` on average hardware while maintaining industrial precision (>0.01mm).
+### التمركز للـ Laser Head
+عُولجت مشكلة الـ (Offset) بتمركز القطع النهائية بعد القطع:
+```typescript
+finalMesh.geometry.translate(-centerX, -centerY, -bbox.min.z);
+```
+تضمن هذه المعادلة أن ماكينة **NcStudio** ستعتبر الـ origin point `(0,0)` في مركز الأنبوب בדיق, بدلاً من اصطدام رأس الليزر بالهيكل المعدني.
 
-### CSG Manifold Safety
-To ensure successful boolean operations:
-- All geometries are "Closed Solids" (Water-tight).
-- The `handleCutter` always exceeds the tube dimensions (`tw * 4`, `th * 4`) to prevent "coplanar edge" errors in the BSP tree.
+### متانة المجسمات للزوايا الصغيرة (CSG Manifold Safety)
+لتجنب "الأخطاء الشجرية" (BSP Tree Coplanar edge matching) التي تظهر كفجوات أو اختفاء للمجسم:
+- القواطع مثل (Handle Cutter) أكبر 4 مرات تقريباً من الأنبوب.
+- الأقسام الداخلية تُزاح بمقدار صغير `Math.max(0.1, ...)` لتجنب نقاط السماكة المنعدمة (Zero-thickness walls).

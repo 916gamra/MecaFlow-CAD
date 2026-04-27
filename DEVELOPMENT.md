@@ -1,27 +1,30 @@
-# Development Guide 🛠️
+# Development Guide 🛠️ (دليل المطورين)
 
-## Project Structure
-- `src/components/ThreeCanvas.tsx`: The "Heart" of the app. Contains the geometry generation and CSG engine logic.
-- `src/components/ZeroGapControlPanel.tsx`: The UI controller. Handles state updates and localized labeling.
-- `src/types.ts`: Central source of truth for the `ZeroGapState` configuration object.
-- `src/App.tsx`: Main entry point, state management, and layout.
+هذا الدليل مخصص للمبرمجين و أنظمة الذكاء الاصطناعي (AI Assistants) التي ستعمل على صيانة أو تطوير التطبيق في المستقبل. يتميز التطبيق بمعمارية دقيقة تعتمد على الهندسة الحاسوبية الدقيقة.
 
-## Adding a New Parameter
-To add a new geometric feature (e.g., "Hole Diameter"):
-1. Update `ZeroGapState` in `src/types.ts`.
-2. Add the default value in `App.tsx`.
-3. Add a slider/input in `ZeroGapControlPanel.tsx`.
-4. Implement the logic in the `generateGeometry` function inside `ThreeCanvas.tsx`.
+## 📁 هيكلة المشروع (Project Structure)
+- `src/components/ThreeCanvas.tsx`: **قلب النظام (The Heart)**. يحتوي على منطق توليد المجسمات (Geometry Generation) ومحرك العمليات البوليانية (CSG Engine). التغييرات هنا يجب أن تكون حذرة رياضياً.
+- `src/components/ZeroGapControlPanel.tsx`: واجهة التحكم الديناميكية. مسؤولة عن إدارة حالة (State) المعاملات باللغة العربية وتحديث المنظومة.
+- `src/types.ts`: مصدر الحقيقة (Single Source of Truth) لهيكل بيانات التكوين (Configuration) الـ `ZeroGapState`.
+- `src/lib/exportUtils.ts`: أداة توليد (Python/CadQuery) المعزولة، وهي المسؤولة عن تحويل المعاملات من المتصفح إلى سكريبت يتم تشغيله محلياً لاستخراج شكل STEP موثوق.
+- `src/App.tsx`: نقطة الدخول (Entry Point) وإدارة الحالات العامة للتطبيق والمحاكاة.
 
-## CSG Troubleshooting
-If the boolean operation fails (becomes invisible):
-1. **Check for Coplanar Faces**: Ensure cutters are slightly larger than the target.
-2. **Compute Normals**: Always call `geometry.computeVertexNormals()` after a CSG operation.
-3. **Degenerate Triangles**: If inputs are 0 or too small, the CSG engine will crash. Added guards `Math.max(0.1, ...)` are critical.
+## ➕ إضافة متغير هندسي جديد (Adding a New Geometric Parameter)
+إذا طُلب منك إضافة ميزة جديدة (مثل: ثقب مسامير, تجويف تهوية، الخ):
+1. قم بتعريف المتغير الجديد كنوع (Type) في هيكل `ZeroGapState` داخل `src/types.ts`.
+2. أضف القيمة الافتراضية للمتغير في حالة المكون الأساسي (Initial State) داخل `App.tsx`.
+3. قم ببناء أوامر الواجهة (UI Slider/Toggle) لربط المتغير مع المستخدم داخل `ZeroGapControlPanel.tsx`.
+4. وأخيراً، نفّذ المنطق الرياضي والتأثير البصري داخل دالة المحاكاة الموجودة في `ThreeCanvas.tsx`. وتأكد من تأثيرها في ملف التصدير للسكربت في `exportUtils.ts`.
 
-## Build Commands
+## 🐛 حلول مشاكل محرك (CSG Troubleshooting)
+إذا فشلت عملية القطع وأصبح المجسم مخفياً (Invisible Object):
+1. **الوجوه المتطابقة (Coplanar Faces)**: تحدث عندما يتطابق سطح القاطع مع سطح الأنبوب بالضبط. *الحل*: اجعل القاطع أكبر من الأنبوب بقليل (تجاوز الأبعاد)، وهو ما يعكسه الكود في متغير `handleCutter`.
+2. **إعادة حساب النواظم (Vertex Normals)**: تأكد دائمًا من استدعاء `geometry.computeVertexNormals()` بعد الانتهاء من عملية الطرح CSG حتى لا يبدو التظليل مكسوراً.
+3. **التجاويف والتشكيلات الصفرية المعيبة (Degenerate Triangles)**: إياك والسماح للمتغيرات (مثل الجدار الداخلي) بالوصول إلى سُمك أو قطر=0، أضف دوماً `Math.max(0.1, val)` للحفاظ على تماسك المجسم.
+
+## 📦 بناء ونشر التطبيق (Commands)
 ```bash
-npm run dev      # Start development server
-npm run build    # Build for production (Dist folder)
-npm run lint     # Check for TS errors
+npm run dev      # بدء خادم التطوير (Hot Reload)
+npm run build    # تجهيز الملفات النهائية للاستخدام (Production Build)
+npm run lint     # تشغيل الأداة النحوية وفحص توافقية TypeScript
 ```

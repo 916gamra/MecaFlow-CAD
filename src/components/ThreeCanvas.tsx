@@ -289,18 +289,20 @@ const ThreeCanvas = forwardRef<ThreeCanvasRef, ThreeCanvasProps>(({ config, grid
         roughness: 0.3
       }));
 
+      const tiltAxis = config.assembly.tiltAxis || 'X';
+
       // 3. Handle End Cutter (Tilt Plane at tail of tube)
       const handleAngleRad = (config.assembly.handleAngle || 10) * (Math.PI / 180);
       const handleCutterGeom = new THREE.BoxGeometry(tw * 4, th * 4, tl);
       handleCutterGeom.translate(0, 0, tl / 2); // Center of cut plane
       const handleCutterMesh = new THREE.Mesh(handleCutterGeom);
       handleCutterMesh.position.set(0, 0, tl);
-      handleCutterMesh.rotation.x = -handleAngleRad;
+      handleCutterMesh.rotation.x = tiltAxis === 'X' ? -handleAngleRad : 0;
+      handleCutterMesh.rotation.y = tiltAxis === 'Y' ? -handleAngleRad : 0;
       handleCutterMesh.updateMatrixWorld(true);
 
       // Apply Assembly Transformations
       const angleRad = (90 - config.assembly.tiltAngle) * (Math.PI / 180);
-      const tiltAxis = config.assembly.tiltAxis || 'X';
 
       // Position logic: partLength determines where the pan starts cutting relative to tube start (0,0,0)
       panMesh.position.set(0, 0, config.tube.partLength);
@@ -338,24 +340,16 @@ const ThreeCanvas = forwardRef<ThreeCanvasRef, ThreeCanvasProps>(({ config, grid
         
         // Subtract Pan and Handle Cutter from Tube
         let resultBSP = tubeBSP.subtract(panBSP).subtract(handleBSP);
-        
-        // Twin Nesting Logic
+              // Twin Nesting Logic
         if (config.nestingMode === 'twin') {
-          // Invert the result for the twin
-          // Mirroring is a bit tricky with BSP, we can export mesh and mirror mesh then BSP again or use matrix
+          // Mirror across the handle cut plane for visual twin effect
           const singleMesh = CSG.toMesh(resultBSP, new THREE.Matrix4());
           const twinMesh = singleMesh.clone();
           
-          // Mirror across the handle cut plane
-          // The handle plane is at Z=tl with handleAngle
-          // Roughly, we can rotate 180 around the handle plane normal
-          // Or just rotate 180 and translate
-          twinMesh.rotateX(Math.PI);
-          twinMesh.rotateZ(Math.PI);
-          
-          // Position relative to first part
-          // We want the slanted faces to be close
+          // Tail-to-tail inversion
+          twinMesh.rotateY(Math.PI);
           twinMesh.position.z = (tl * 2) + (config.slugGap || 5);
+          twinMesh.updateMatrixWorld(true);
           
           const twinBSP = CSG.fromMesh(twinMesh);
           resultBSP = resultBSP.union(twinBSP);
@@ -365,7 +359,7 @@ const ThreeCanvas = forwardRef<ThreeCanvasRef, ThreeCanvasProps>(({ config, grid
         const resultMat = new THREE.MeshStandardMaterial({
           color: 0xF27D26, // Orange accent
           metalness: 0.6,
-          roughness: 0.4,
+          roughness: 0.3,
           side: THREE.DoubleSide
         });
         
@@ -373,6 +367,16 @@ const ThreeCanvas = forwardRef<ThreeCanvasRef, ThreeCanvasProps>(({ config, grid
         finalMesh.name = 'zerogap_result';
         
         finalMesh.geometry.computeVertexNormals();
+
+        // ** Fix 1: Translation and Centering (CenterXY) **
+        // Shift geometry so the part is strictly centered over origin (0,0) for the laser machine logic
+        finalMesh.geometry.computeBoundingBox();
+        const bbox = finalMesh.geometry.boundingBox;
+        if (bbox) {
+          const centerX = (bbox.max.x + bbox.min.x) / 2;
+          const centerY = (bbox.max.y + bbox.min.y) / 2;
+          finalMesh.geometry.translate(-centerX, -centerY, -bbox.min.z);
+        }
 
         // Simulated rounding if config.addFillet is true (visual effect with edges)
         const edges = new THREE.EdgesGeometry(finalMesh.geometry);
