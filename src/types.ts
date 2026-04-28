@@ -21,6 +21,8 @@ export interface PanConfig {
   curveRadius: number;   
   rimThickness: number;
   bottomFilletRadius: number;
+  addRim: boolean;
+  rimHeight: number;
 }
 
 export interface TubeConfig {
@@ -29,12 +31,17 @@ export interface TubeConfig {
   thickness: number;      
   totalLength: number;         
   partLength: number;
-  cornerRadius: number;   
+  cornerRadius: number;
+  shape: 'دائري' | 'بيضاوي' | 'مخصص';
+  customStlBuffer?: ArrayBuffer;
+  customStlName?: string;
 }
 
 export interface AssemblyConfig {
   tiltAngle: number;
-  handleAngle: number;
+  handleAngleX: number;
+  handleAngleY: number;
+  handleOffset: number;
   insertionDistance: number;
   heightOffset: number;
   tiltAxis: 'X' | 'Y';
@@ -49,6 +56,7 @@ export interface ZeroGapState {
   thermalClearance: boolean;
   nestingMode: 'single' | 'twin';
   slugGap: number;
+  markOrientation?: boolean;
 }
 
 export interface CADState {
@@ -59,4 +67,3 @@ export interface CADState {
   units: 'mm' | 'inch';
   zeroGap: ZeroGapState;
 }
-
