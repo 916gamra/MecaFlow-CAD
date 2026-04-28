@@ -40,7 +40,10 @@ export default function App() {
     <>
       {showSplash && (
         <div className="splash-screen">
-          <div className="neon-text-lux">CIOB</div>
+          <div className="splash-logo-container">
+            <div className="splash-logo-cube"></div>
+          </div>
+          <div className="neon-text-lux">MecaFlow-CAD</div>
           <div className="neon-sub-lux">ZERO-GAP LASER SYSTEM</div>
         </div>
       )}
@@ -49,7 +52,7 @@ export default function App() {
       <header className="h-[48px] px-4 bg-[var(--bg-header)] border-b border-[var(--border)] flex items-center justify-between shrink-0 z-20">
         <div className="flex items-center gap-2">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--accent)"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-          <h1 className="text-sm font-bold tracking-wider uppercase text-[var(--accent)]">ZERO-GAP LASER CAD</h1>
+          <h1 className="text-sm font-bold tracking-wider uppercase text-[var(--accent)]">MecaFlow-CAD (Zero-Gap)</h1>
         </div>
 
         <div className="flex items-center gap-6">

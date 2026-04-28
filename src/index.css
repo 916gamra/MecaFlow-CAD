@@ -38,29 +38,83 @@ body {
   position: fixed;
   inset: 0;
   background-color: #030303;
+  /* Add grid background */
+  background-image: 
+    linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px),
+    radial-gradient(circle at center, rgba(0, 229, 255, 0.1), transparent 60%);
+  background-size: 40px 40px, 40px 40px, 100% 100%;
+  background-position: center center;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   z-index: 9999;
-  background-image: radial-gradient(circle at center, rgba(0, 229, 255, 0.1), transparent 50%);
+}
+
+.splash-logo-container {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin-bottom: 2.5rem;
+  animation: float 4s ease-in-out infinite;
+  perspective: 800px;
+}
+
+.splash-logo-cube {
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--accent);
+  border-radius: 4px;
+  transform-style: preserve-3d;
+  box-shadow: 0 0 30px rgba(212, 175, 55, 0.2), inset 0 0 20px rgba(212, 175, 55, 0.2);
+  animation: spin3D 8s infinite linear;
+}
+
+.splash-logo-cube::before,
+.splash-logo-cube::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 2px solid var(--accent-blue);
+  border-radius: 4px;
+}
+
+.splash-logo-cube::before {
+  transform: translateZ(40px);
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.3), inset 0 0 20px rgba(0, 229, 255, 0.3);
+}
+
+.splash-logo-cube::after {
+  transform: translateZ(-40px);
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes spin3D {
+  0% { transform: rotateX(60deg) rotateZ(0deg); }
+  100% { transform: rotateX(60deg) rotateZ(360deg); }
 }
 
 .neon-text-lux {
   font-size: 3.5rem;
   font-family: var(--font-sans);
-  font-weight: 300;
+  font-weight: 800;
   color: #fff;
-  letter-spacing: 4px;
-  text-shadow: 0 0 10px rgba(0, 229, 255, 0.5), 0 0 20px rgba(0, 229, 255, 0.3);
+  letter-spacing: 2px;
+  text-shadow: 0 0 15px rgba(212, 175, 55, 0.6), 0 0 30px rgba(212, 175, 55, 0.4);
   animation: fadeIn 1.5s ease-out;
 }
 .neon-sub-lux {
   font-family: var(--font-mono);
-  font-size: 1rem;
-  color: var(--accent);
-  margin-top: 1rem;
-  letter-spacing: 2px;
+  font-size: 1.2rem;
+  color: var(--accent-blue);
+  margin-top: 0.5rem;
+  letter-spacing: 4px;
+  text-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
   animation: fadeInUp 1.5s ease-out 0.5s both;
 }
 
