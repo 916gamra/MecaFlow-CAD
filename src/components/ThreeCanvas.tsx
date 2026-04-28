@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import { OrbitControls, STLExporter, STLLoader } from 'three-stdlib';
 import { CSG } from 'three-csg-ts';
 import { ZeroGapState } from '../types';
+import { validateTubeConfig, validatePanConfig } from '../lib/validators';
+import { performanceOptimizer } from '../lib/performanceOptimizer';
 
 interface ThreeCanvasProps {
   config: ZeroGapState;
@@ -142,6 +144,7 @@ const ThreeCanvas = forwardRef<ThreeCanvasRef, ThreeCanvasProps>(({ config, grid
       animationId = requestAnimationFrame(animate);
       controls.update();
       renderer.render(scene, camera);
+      performanceOptimizer.measureFPS();
     };
     animate();
 
@@ -173,6 +176,14 @@ const ThreeCanvas = forwardRef<ThreeCanvasRef, ThreeCanvasProps>(({ config, grid
   useEffect(() => {
     const scene = sceneRef.current;
     if (!scene || webglError) return;
+    
+    try {
+      validateTubeConfig(config.tube);
+      validatePanConfig(config.pan);
+    } catch (err: any) {
+      console.warn('Geometry validation failed:', err.message);
+      return;
+    }
 
     // Remove previous meshes
     const objectsToRemove = scene.children.filter(c => c.name.startsWith('zerogap_'));
