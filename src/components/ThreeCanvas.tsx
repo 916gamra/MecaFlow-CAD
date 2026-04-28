@@ -489,13 +489,13 @@ const ThreeCanvas = forwardRef<ThreeCanvasRef, ThreeCanvasProps>(({ config, grid
         finalMesh.geometry.computeVertexNormals();
 
         // ** Fix 1: Translation and Centering (CenterXY) **
-        // Shift geometry so the part is strictly centered over origin (0,0) for the laser machine logic
+        // Shift geometry so the part is strictly centered over origin (0,0,0) as requested
         finalMesh.geometry.computeBoundingBox();
         const bbox = finalMesh.geometry.boundingBox;
         if (bbox && bbox.min.x !== Infinity && !isNaN(bbox.min.x)) {
-          const centerX = (bbox.max.x + bbox.min.x) / 2;
-          const centerY = (bbox.max.y + bbox.min.y) / 2;
-          finalMesh.geometry.translate(-centerX, -centerY, -bbox.min.z);
+          const center = new THREE.Vector3();
+          bbox.getCenter(center);
+          finalMesh.geometry.translate(-center.x, -center.y, -center.z);
         }
 
         // Simulated rounding if config.addFillet is true (visual effect with edges)
@@ -517,25 +517,35 @@ const ThreeCanvas = forwardRef<ThreeCanvasRef, ThreeCanvasProps>(({ config, grid
         exportMeshRef.current = finalMesh;
       }
 
-      // Re-center target without resetting camera position abruptly
+      // Frame the object properly using Box3 world bounds
       if (controlsRef.current && cameraRef.current && exportMeshRef.current) {
-        exportMeshRef.current.geometry.computeBoundingBox();
-        const b = exportMeshRef.current.geometry.boundingBox;
-        if (b && b.min.x !== Infinity) {
+        const bbox = new THREE.Box3();
+        if (config.renderMode === 'preview') {
+          // Frame all relevant objects in preview mode
+          scene.children.forEach(c => {
+            if (c.name.startsWith('zerogap_')) bbox.expandByObject(c);
+          });
+        } else {
+          bbox.setFromObject(exportMeshRef.current);
+        }
+
+        if (bbox.min.x !== Infinity) {
+          const worldCenter = new THREE.Vector3();
+          bbox.getCenter(worldCenter);
+          controlsRef.current.target.copy(worldCenter);
+          
           if (!hasAutoCentered.current || lastStlName.current !== config.tube.customStlName) {
-            const center = new THREE.Vector3();
-            b.getCenter(center);
-            controlsRef.current.target.copy(center);
-            
-            const maxDim = Math.max(b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z) || 100;
+            const maxDim = Math.max(bbox.max.x - bbox.min.x, bbox.max.y - bbox.min.y, bbox.max.z - bbox.min.z) || 100;
             const fov = cameraRef.current.fov * (Math.PI / 180);
-            let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2)) * 1.5;
-            cameraRef.current.position.set(center.x + cameraZ * 0.5, center.y + cameraZ * 0.8, center.z + cameraZ);
+            let cameraDist = Math.abs(maxDim / 2 / Math.tan(fov / 2)) * 1.5;
+            
+            // Adjust camera position to frame the object
+            cameraRef.current.position.set(worldCenter.x + cameraDist * 0.5, worldCenter.y + cameraDist * 0.8, worldCenter.z + cameraDist);
             
             hasAutoCentered.current = true;
             lastStlName.current = config.tube.customStlName;
-            controlsRef.current.update();
           }
+          controlsRef.current.update();
         }
       }
 
@@ -551,12 +561,21 @@ const ThreeCanvas = forwardRef<ThreeCanvasRef, ThreeCanvasProps>(({ config, grid
 
   const handleSnapView = (view: string) => {
     if (!controlsRef.current || !cameraRef.current || !exportMeshRef.current) return;
-    const b = exportMeshRef.current.geometry.boundingBox;
-    if (!b) return;
+    
+    const bbox = new THREE.Box3();
+    if (config.renderMode === 'preview') {
+      sceneRef.current?.children.forEach(c => {
+        if (c.name.startsWith('zerogap_')) bbox.expandByObject(c);
+      });
+    } else {
+      bbox.setFromObject(exportMeshRef.current);
+    }
+
+    if (bbox.min.x === Infinity) return;
     
     const center = new THREE.Vector3();
-    b.getCenter(center);
-    const maxDim = Math.max(b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z) || 100;
+    bbox.getCenter(center);
+    const maxDim = Math.max(bbox.max.x - bbox.min.x, bbox.max.y - bbox.min.y, bbox.max.z - bbox.min.z) || 100;
     const dist = maxDim * 1.5;
 
     switch(view) {
